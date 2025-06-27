@@ -1,0 +1,13 @@
+django
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+tensorflow
+tensorflow_hub
+librosa
+pillow
+matplotlib
+opencv-python
+yolo
+ultralytics
+langgraph
