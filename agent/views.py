@@ -109,13 +109,20 @@ def process_audio(request):
         logger.info(f"Content-Type del archivo: {audio_file.content_type}")
         
         # Validar tipo de archivo
-        allowed_types = ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/ogg']
-        if audio_file.content_type not in allowed_types:
-            logger.error(f"Tipo de archivo no soportado: {audio_file.content_type}")
-            return Response(
-                {"error": f"Tipo de archivo no soportado. Tipos permitidos: {', '.join(allowed_types)}"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        allowed_types = ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/ogg', 'audio/x-wav', 'audio/wave']
+        file_content_type = audio_file.content_type.lower()
+        
+        # Verificar si el tipo está permitido directamente
+        if file_content_type not in allowed_types:
+            # Verificar si es un archivo WAV por extensión
+            if audio_file.name.lower().endswith('.wav'):
+                logger.info(f"Archivo WAV detectado por extensión, Content-Type: {file_content_type}")
+            else:
+                logger.error(f"Tipo de archivo no soportado: {file_content_type}")
+                return Response(
+                    {"error": f"Tipo de archivo no soportado. Tipos permitidos: {', '.join(allowed_types)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         
         # Verificar que el archivo no esté vacío
         if audio_file.size == 0:
@@ -130,9 +137,6 @@ def process_audio(request):
         # Ejecutar el workflow del agente
         initial_state = get_initial_state()
         initial_state["audio_file"] = audio_file
-        initial_state["messages"].append(
-            HumanMessage(content=f"Procesando archivo: {audio_file.name} ({audio_file.size} bytes)")
-        )
         
         logger.info("Ejecutando workflow del agente")
         final_state = compiled_workflow.invoke(initial_state)
@@ -148,7 +152,16 @@ def process_audio(request):
             "sound_type": final_state.get("sound_type", "Unknown")
         }
         
-        # Preparar respuesta
+        # Preparar respuesta - solo incluir mensajes únicos y relevantes
+        messages = final_state.get("messages", [])
+        unique_messages = []
+        seen_contents = set()
+        
+        for msg in messages:
+            if msg.content not in seen_contents:
+                unique_messages.append(msg)
+                seen_contents.add(msg.content)
+        
         response_data = {
             "success": True,
             "user_id": request.user.id,
@@ -163,7 +176,7 @@ def process_audio(request):
                     "type": "system" if "ERROR" in msg.content else "info",
                     "content": msg.content
                 }
-                for msg in final_state.get("messages", [])
+                for msg in unique_messages
             ]
         }
         
@@ -335,9 +348,6 @@ def process_audio_legacy(request):
         # Ejecutar el workflow del agente
         initial_state = get_initial_state()
         initial_state["audio_file"] = audio_file
-        initial_state["messages"].append(
-            HumanMessage(content=f"Procesando archivo: {audio_file.name}")
-        )
         
         final_state = compiled_workflow.invoke(initial_state)
         

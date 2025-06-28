@@ -101,7 +101,7 @@ def get_initial_state() -> AgentState:
         AgentState: Estado inicial configurado
     """
     return {
-        "messages": [HumanMessage(content="Iniciando el sistema de monitoreo de audio de Signaware.")],
+        "messages": [],  # Iniciar con mensajes vacíos para evitar duplicación
         "is_conversation_detected": False,
         "audio_file": None,
         "audio_path": "",

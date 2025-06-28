@@ -2,7 +2,7 @@ from pathlib import Path
 from datetime import timedelta
 from corsheaders.defaults import (
     default_headers,
-)  # 👈 Importación para headers por defecto
+)
 
 # =============================================================================
 # Project Paths
@@ -34,9 +34,7 @@ INSTALLED_APPS = [
     # Local Apps
     "users",
     "core",
-    "driving",
-    "detections",
-    "models_ai",
+    "agent",
 ]
 
 MIDDLEWARE = [

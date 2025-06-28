@@ -1,4 +1,4 @@
-# safe_drive_api
+# signaware_api
 
 Crear y Aplicar Migraciones 
 python manage.py makemigrations 
@@ -17,9 +17,8 @@ CodeSignal2025
 leonidasmv
 dev12345
 
-daphne safe_drive_api.asgi:application
+daphne signaware_api.asgi:application
 
 
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121/
 
-python models_ai/live_video_detection.py

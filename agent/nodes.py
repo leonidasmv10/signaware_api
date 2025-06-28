@@ -101,9 +101,14 @@ def save_uploaded_audio_node(state: AgentState) -> AgentState:
         
         # Actualizar estado
         state["audio_path"] = temp_path
-        state["messages"].append(
-            HumanMessage(content=f"Audio guardado exitosamente en: {temp_path} ({file_size} bytes)")
-        )
+        
+        # Solo agregar mensaje si no existe ya
+        audio_saved_msg = f"Audio guardado exitosamente en: {temp_path} ({file_size} bytes)"
+        existing_messages = [msg.content for msg in state["messages"]]
+        if audio_saved_msg not in existing_messages:
+            state["messages"].append(
+                HumanMessage(content=audio_saved_msg)
+            )
         
         logger.info(f"Audio guardado exitosamente en: {temp_path} ({file_size} bytes)")
         return state
@@ -162,9 +167,12 @@ def audio_analysis_node(state: AgentState) -> AgentState:
         for i, (detected_sound, detected_confidence) in enumerate(analysis_result, 1):
             detection_summary += f"  {i}. {detected_sound}: {detected_confidence:.3f}\n"
         
-        state["messages"].append(
-            SystemMessage(content=detection_summary)
-        )
+        # Solo agregar mensaje si no existe ya
+        existing_messages = [msg.content for msg in state["messages"]]
+        if detection_summary not in existing_messages:
+            state["messages"].append(
+                SystemMessage(content=detection_summary)
+            )
         
         logger.info(f"Tipo de sonido detectado: {sound_type} (confianza: {confidence:.2f})")
         logger.info(f"Todos los resultados: {analysis_result}")
@@ -271,9 +279,13 @@ def show_sound_type_node(state: AgentState) -> AgentState:
     sound_type = state.get("sound_type", "Unknown")
     confidence = state.get("confidence", 0.0)
     
-    state["messages"].append(
-        SystemMessage(content=f"Tipo de sonido detectado: {sound_type} (confianza: {confidence:.2f})")
-    )
+    # Solo agregar mensaje si no existe ya
+    sound_type_msg = f"Tipo de sonido detectado: {sound_type} (confianza: {confidence:.2f})"
+    existing_messages = [msg.content for msg in state["messages"]]
+    if sound_type_msg not in existing_messages:
+        state["messages"].append(
+            SystemMessage(content=sound_type_msg)
+        )
     
     logger.info(f"Tipo de sonido: {sound_type} (confianza: {confidence:.2f})")
     return state 
