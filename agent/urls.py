@@ -4,7 +4,7 @@ Define las rutas para los endpoints de procesamiento de audio.
 """
 
 from django.urls import path
-from .views import process_audio, health_check, process_audio_legacy, get_audio
+from .views import process_audio, health_check, process_audio_legacy, get_audio, GeminiChatView
 
 app_name = 'agent'
 
@@ -35,5 +35,12 @@ urlpatterns = [
         'process-audio-legacy/',
         process_audio_legacy,
         name='process_audio_legacy'
+    ),
+    
+    # Endpoint para chat Gemini
+    path(
+        'chat/gemini/',
+        GeminiChatView.as_view(),
+        name='chat_gemini'
     ),
 ] 

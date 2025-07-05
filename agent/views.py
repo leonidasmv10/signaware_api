@@ -18,12 +18,42 @@ from rest_framework.response import Response
 from rest_framework import status
 from langchain_core.messages import HumanMessage
 from .workflow import compiled_workflow, get_initial_state
+from rest_framework.views import APIView
+import google.generativeai as genai
+import dotenv
+from .providers.gemini_text_generation_provider import GeminiTextGenerationProvider
+from agent.providers.openai_text_generation_provider import OpenAITextGenerationProvider
+from agent.providers.leonidasmv_text_generation_provider import LeonidasmvTextGenerationProvider
 
 # Configurar logging
 logger = logging.getLogger(__name__)
 
 # Almacenamiento temporal de audios procesados (en producción usar base de datos)
 processed_audios = {}
+
+
+GEMINI_PROVIDER = GeminiTextGenerationProvider()
+OPENAI_PROVIDER = OpenAITextGenerationProvider()
+LEONIDASMV_PROVIDER = LeonidasmvTextGenerationProvider()
+
+class GeminiChatView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user_message = request.data.get("message")
+        model = request.data.get("model", "gemini")
+        if not user_message:
+            return Response({"error": "No se recibió mensaje."}, status=400)
+        try:
+            if model == "openai":
+                response = OPENAI_PROVIDER.generate(user_message)
+            elif model == "leonidasmv":
+                response = LEONIDASMV_PROVIDER.generate(user_message)
+            else:
+                response = GEMINI_PROVIDER.generate(user_message)
+            return Response({"response": response})
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
 
 def cleanup_old_audios():
     """
