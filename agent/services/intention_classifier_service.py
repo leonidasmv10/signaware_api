@@ -4,7 +4,7 @@ import shutil
 import numpy as np
 import io
 from uuid import uuid4
-from signaware_api.agent.providers.text_generation.gemini_text_generation_provider import (
+from agent.providers.text_generation.gemini_text_generation_provider import (
     GeminiTextGenerationProvider,
 )
 
@@ -12,7 +12,6 @@ from signaware_api.agent.providers.text_generation.gemini_text_generation_provid
 class IntentionClassifierService:
     def __init__(self):
         self.text_generation_provider = GeminiTextGenerationProvider()
-        pass
 
     def get_intent_prompt(self, user_input):
         """Genera el prompt para clasificar la intención del usuario"""

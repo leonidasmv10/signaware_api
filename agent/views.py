@@ -5,6 +5,7 @@ Proporciona endpoints para procesamiento de audio y transcripción.
 
 import logging
 import json
+import soundfile as sf
 import os
 import uuid
 import time
@@ -19,12 +20,12 @@ from rest_framework import status
 from langchain_core.messages import HumanMessage
 from .workflow import compiled_workflow, get_initial_state
 from rest_framework.views import APIView
-import google.generativeai as genai
 import dotenv
+from agent.logic.sound_detector_agent import SoundDetectorAgent
 from .providers.text_generation.gemini_text_generation_provider import GeminiTextGenerationProvider
-from agent.providers.text_generation.openai_text_generation_provider import OpenAITextGenerationProvider
-from agent.providers.text_generation.leonidasmv_text_generation_provider import LeonidasmvTextGenerationProvider
-
+from .providers.text_generation.openai_text_generation_provider import OpenAITextGenerationProvider
+from .providers.text_generation.leonidasmv_text_generation_provider import LeonidasmvTextGenerationProvider
+from .services.intention_classifier_service import IntentionClassifierService
 # Configurar logging
 logger = logging.getLogger(__name__)
 
@@ -32,11 +33,13 @@ logger = logging.getLogger(__name__)
 processed_audios = {}
 
 
+SOUND_DETECTOR_AGENT = SoundDetectorAgent()
 GEMINI_PROVIDER = GeminiTextGenerationProvider()
 OPENAI_PROVIDER = OpenAITextGenerationProvider()
 LEONIDASMV_PROVIDER = LeonidasmvTextGenerationProvider()
+INTENTION_CLASSIFIER_SERVICE = IntentionClassifierService()
 
-class GeminiChatView(APIView):
+class AgentView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -44,16 +47,46 @@ class GeminiChatView(APIView):
         model = request.data.get("model", "gemini")
         if not user_message:
             return Response({"error": "No se recibió mensaje."}, status=400)
+        
         try:
             if model == "openai":
-                response = OPENAI_PROVIDER.execute(user_message)
+                try:
+                    # response = OPENAI_PROVIDER.execute(user_message)
+                    response = INTENTION_CLASSIFIER_SERVICE.execute(user_message)
+                except Exception as e:
+                    logger.error(f"Error en OpenAI/IntentionClassifier: {e}")
+                    return Response({"error": f"Error en el modelo OpenAI: {str(e)}"}, status=500)
+                    
             elif model == "leonidasmv":
-                response = LEONIDASMV_PROVIDER.execute(user_message)
-            else:
-                response = GEMINI_PROVIDER.execute(user_message)
+                try:
+                    # response = LEONIDASMV_PROVIDER.execute(user_message)
+                    audio_file_path_to_load = r"C:\Users\yordy\Documents\dev\bootcamp\inteligencia_artificial\keepcoding\signaware\signaware_api\agent\test\audio_fragments\dialogo dos personas.wav"
+
+                    audio_data, samplerate = sf.read(audio_file_path_to_load)
+
+                    audio_path = audio_file_path_to_load
+                    audio_file = audio_data
+
+                    response = SOUND_DETECTOR_AGENT.execute(user_message, audio_path, audio_file)
+                except FileNotFoundError as e:
+                    logger.error(f"Archivo de audio no encontrado: {e}")
+                    return Response({"error": "Archivo de audio de prueba no encontrado"}, status=500)
+                except Exception as e:
+                    logger.error(f"Error en Leonidasmv/SoundDetector: {e}")
+                    return Response({"error": f"Error en el modelo Leonidasmv: {str(e)}"}, status=500)
+                    
+            else:  # gemini
+                try:
+                    response = GEMINI_PROVIDER.execute(user_message)
+                except Exception as e:
+                    logger.error(f"Error en Gemini: {e}")
+                    return Response({"error": f"Error en el modelo Gemini: {str(e)}"}, status=500)
+                    
             return Response({"response": response})
+            
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            logger.error(f"Error general en AgentView: {e}")
+            return Response({"error": f"Error interno del servidor: {str(e)}"}, status=500)
 
 def cleanup_old_audios():
     """
