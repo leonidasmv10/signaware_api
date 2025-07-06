@@ -37,10 +37,10 @@ urlpatterns = [
         name='process_audio_legacy'
     ),
     
-    # Endpoint para chat Gemini
+    # Endpoint para generación de texto
     path(
-        'chat/gemini/',
+        'text_generation/',
         GeminiChatView.as_view(),
-        name='chat_gemini'
+        name='text_generation'
     ),
 ] 

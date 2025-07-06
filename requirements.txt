@@ -7,7 +7,13 @@ tensorflow_hub
 librosa
 pillow
 matplotlib
-opencv-python
-yolo
 ultralytics
 langgraph
+google.generativeai
+openai
+python-dotenv
+faster_whisper
+transformers
+accelerate
+bitsandbytes
+sentencepiece

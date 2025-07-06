@@ -21,9 +21,9 @@ from .workflow import compiled_workflow, get_initial_state
 from rest_framework.views import APIView
 import google.generativeai as genai
 import dotenv
-from .providers.gemini_text_generation_provider import GeminiTextGenerationProvider
-from agent.providers.openai_text_generation_provider import OpenAITextGenerationProvider
-from agent.providers.leonidasmv_text_generation_provider import LeonidasmvTextGenerationProvider
+from .providers.text_generation.gemini_text_generation_provider import GeminiTextGenerationProvider
+from agent.providers.text_generation.openai_text_generation_provider import OpenAITextGenerationProvider
+from agent.providers.text_generation.leonidasmv_text_generation_provider import LeonidasmvTextGenerationProvider
 
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -46,11 +46,11 @@ class GeminiChatView(APIView):
             return Response({"error": "No se recibió mensaje."}, status=400)
         try:
             if model == "openai":
-                response = OPENAI_PROVIDER.generate(user_message)
+                response = OPENAI_PROVIDER.execute(user_message)
             elif model == "leonidasmv":
-                response = LEONIDASMV_PROVIDER.generate(user_message)
+                response = LEONIDASMV_PROVIDER.execute(user_message)
             else:
-                response = GEMINI_PROVIDER.generate(user_message)
+                response = GEMINI_PROVIDER.execute(user_message)
             return Response({"response": response})
         except Exception as e:
             return Response({"error": str(e)}, status=500)
