@@ -106,3 +106,69 @@ def create_directories():
     for directory in directories:
         if not os.path.exists(directory):
             os.makedirs(directory, exist_ok=True) 
+
+# Diccionario de sonidos relevantes para filtrar
+RELEVANT_SOUNDS_DICT = {
+    'Alarm': 'danger_alert',
+    'Fire alarm': 'danger_alert',
+    'Smoke detector': 'danger_alert',
+    'Siren': 'danger_alert',
+    'Civil defense siren': 'danger_alert',
+    'Telephone bell ringing': 'attention_alert',
+    'Ringtone': 'attention_alert',
+    'Doorbell': 'attention_alert',
+    'Ding-dong': 'attention_alert',
+    'Whistle': 'attention_alert',
+    'Shout': 'social_alert',
+    'Yell': 'social_alert',
+    'Children shouting': 'social_alert',
+    'Screaming': 'social_alert',
+    'Speech': 'social_alert',
+    'Child speech': 'social_alert',
+    'Conversation': 'social_alert',
+    'Crying': 'social_alert',
+    'Baby cry': 'social_alert',
+    'Laughter': 'social_alert',
+    'Baby laughter': 'social_alert',
+    'Giggle': 'social_alert',
+    'Run': 'environment_alert',
+    'Footsteps': 'environment_alert',
+    'Vehicle horn': 'danger_alert',
+    'Car alarm': 'danger_alert',
+    'Reversing beeps': 'danger_alert',
+    'Train': 'environment_alert',
+    'Subway': 'environment_alert',
+    'Car passing by': 'environment_alert',
+    'Dog': 'environment_alert',
+    'Bark': 'environment_alert',
+    'Whimper (dog)': 'social_alert',
+    'Glass': 'danger_alert',
+    'Shatter': 'danger_alert',
+    'Door': 'environment_alert',
+    'Slam': 'attention_alert',
+    'Knock': 'attention_alert',
+    'Toilet flush': 'environment_alert',
+    'Frying (food)': 'environment_alert',
+    'Water tap': 'environment_alert',
+    'Fire': 'danger_alert',
+    'Crackle': 'danger_alert',
+    'Children playing': 'social_alert',
+    'Applause': 'social_alert',
+    'Crowd': 'social_alert',
+    'Thunder': 'environment_alert',
+    'Rain': 'environment_alert',
+    'Rain on surface': 'environment_alert',
+}
+
+# Configuración del filtro de sonidos
+SOUND_FILTER_CONFIG = {
+    'enabled': True,  # Habilitar filtro de sonidos relevantes
+    'min_confidence': 0.3,  # Confianza mínima para considerar un sonido relevante
+    'include_unknown': False,  # Incluir sonidos no clasificados
+    'alert_categories': {
+        'danger_alert': '🔴 Peligro',
+        'attention_alert': '🟡 Atención', 
+        'social_alert': '🟢 Social',
+        'environment_alert': '�� Entorno'
+    }
+} 

@@ -231,6 +231,7 @@ def process_audio(request):
             "audio_id": audio_id,
             "sound_type": final_state.get("sound_type", "Unknown"),
             "confidence": final_state.get("confidence", 0.0),
+            "alert_category": final_state.get("alert_category", "unknown"),
             "is_conversation_detected": final_state.get("is_conversation_detected", False),
             "transcription": final_state.get("transcription", ""),
             "sound_detections": final_state.get("sound_detections", []),

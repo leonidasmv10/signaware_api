@@ -147,25 +147,70 @@ def audio_analysis_node(state: AgentState) -> AgentState:
             )
             return state
         
-        # Analizar el audio
-        analysis_result = audio_processor.analyzer.analyze_file(state["audio_path"])
-        
-        # Guardar todos los resultados de YAMNet (top 3)
-        state["sound_detections"] = analysis_result if analysis_result else []
-        
-        # Extraer el resultado principal (el más probable)
-        sound_type = analysis_result[0][0] if analysis_result else "Unknown"
-        confidence = analysis_result[0][1] if analysis_result and len(analysis_result[0]) > 1 else 0.0
+        # Analizar el audio con filtro de sonidos relevantes
+        try:
+            filtered_analysis_result = audio_processor.analyzer.analyze_file_with_filter(state["audio_path"])
+            
+            # Guardar resultados filtrados
+            state["sound_detections"] = filtered_analysis_result if filtered_analysis_result else []
+            
+            # Extraer el resultado principal (el más probable)
+            if filtered_analysis_result:
+                sound_type = filtered_analysis_result[0][0] if filtered_analysis_result else "Unknown"
+                confidence = filtered_analysis_result[0][1] if filtered_analysis_result and len(filtered_analysis_result[0]) > 1 else 0.0
+                alert_category = filtered_analysis_result[0][2] if filtered_analysis_result and len(filtered_analysis_result[0]) > 2 else "unknown"
+            else:
+                sound_type = "Unknown"
+                confidence = 0.0
+                alert_category = "unknown"
+                
+        except Exception as analysis_error:
+            logger.error(f"Error en análisis con filtro: {analysis_error}")
+            logger.info("Intentando análisis sin filtro...")
+            
+            # Fallback: análisis sin filtro
+            try:
+                analysis_result = audio_processor.analyzer.analyze_file(state["audio_path"])
+                state["sound_detections"] = analysis_result if analysis_result else []
+                
+                if analysis_result:
+                    sound_type = analysis_result[0][0] if analysis_result else "Unknown"
+                    confidence = analysis_result[0][1] if analysis_result and len(analysis_result[0]) > 1 else 0.0
+                    alert_category = "unknown"
+                else:
+                    sound_type = "Unknown"
+                    confidence = 0.0
+                    alert_category = "unknown"
+                    
+            except Exception as fallback_error:
+                logger.error(f"Error en análisis fallback: {fallback_error}")
+                sound_type = "Error"
+                confidence = 0.0
+                alert_category = "unknown"
+                state["sound_detections"] = []
         
         # Actualizar estado
         state["sound_type"] = sound_type
         state["confidence"] = confidence
+        state["alert_category"] = alert_category
         state["is_conversation_detected"] = sound_type == "Speech"
         
-        # Crear mensaje con todos los resultados
-        detection_summary = "Análisis completado:\n"
-        for i, (detected_sound, detected_confidence) in enumerate(analysis_result, 1):
-            detection_summary += f"  {i}. {detected_sound}: {detected_confidence:.3f}\n"
+        # Crear mensaje con resultados filtrados
+        if sound_type == "Error":
+            detection_summary = "❌ Error en el análisis de audio. Verifica que el archivo sea válido."
+        elif state["sound_detections"]:
+            detection_summary = "🎯 Sonidos relevantes detectados:\n"
+            for i, (detected_sound, detected_confidence, category) in enumerate(state["sound_detections"], 1):
+                category_emoji = {
+                    'danger_alert': '🔴',
+                    'attention_alert': '🟡', 
+                    'social_alert': '🟢',
+                    'environment_alert': '🔵',
+                    'unknown': '❓'
+                }.get(category, '❓')
+                detection_summary += f"  {i}. {category_emoji} {detected_sound}: {detected_confidence:.3f} ({category})\n"
+        else:
+            detection_summary = "❌ No se detectaron sonidos relevantes en el audio."
         
         # Solo agregar mensaje si no existe ya
         existing_messages = [msg.content for msg in state["messages"]]
@@ -175,7 +220,7 @@ def audio_analysis_node(state: AgentState) -> AgentState:
             )
         
         logger.info(f"Tipo de sonido detectado: {sound_type} (confianza: {confidence:.2f})")
-        logger.info(f"Todos los resultados: {analysis_result}")
+        logger.info(f"Todos los resultados: {state['sound_detections']}")
         return state
         
     except Exception as e:

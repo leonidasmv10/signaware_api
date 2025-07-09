@@ -5,6 +5,24 @@ import librosa
 import os
 from typing import List, Tuple, Dict
 
+# Importación directa de config
+try:
+    from agent.config import RELEVANT_SOUNDS_DICT, SOUND_FILTER_CONFIG
+except ImportError:
+    # Fallback para cuando no se puede importar
+    RELEVANT_SOUNDS_DICT = {}
+    SOUND_FILTER_CONFIG = {
+        'enabled': False,
+        'min_confidence': 0.3,
+        'include_unknown': False,
+        'alert_categories': {
+            'danger_alert': '🔴 Peligro',
+            'attention_alert': '🟡 Atención', 
+            'social_alert': '🟢 Social',
+            'environment_alert': '🔵 Entorno'
+        }
+    }
+
 # --- Custom Logging Function ---
 # You can easily turn this off or redirect its output.
 _ENABLE_DEBUG_PRINTS = False  # Set to False to disable all custom debug prints
@@ -38,6 +56,36 @@ class YAMNetAudioAnalyzer:
             lines = f.readlines()[1:]
         return [line.split(",")[2].strip().strip('"') for line in lines]
 
+    def _filter_relevant_sounds(self, results: List[Tuple[str, float]]) -> List[Tuple[str, float, str]]:
+        """
+        Filtra los sonidos relevantes según el diccionario configurado.
+        
+        Args:
+            results: Lista de tuplas (sound_name, confidence)
+            
+        Returns:
+            Lista de tuplas (sound_name, confidence, alert_category) con solo sonidos relevantes
+        """
+        if not SOUND_FILTER_CONFIG['enabled']:
+            # Si el filtro está deshabilitado, devolver todos los resultados
+            return [(sound, conf, 'unknown') for sound, conf in results]
+        
+        filtered_results = []
+        min_confidence = SOUND_FILTER_CONFIG['min_confidence']
+        
+        for sound_name, confidence in results:
+            # Verificar si el sonido está en el diccionario de sonidos relevantes
+            if sound_name in RELEVANT_SOUNDS_DICT and confidence >= min_confidence:
+                alert_category = RELEVANT_SOUNDS_DICT[sound_name]
+                filtered_results.append((sound_name, confidence, alert_category))
+                custom_logger(f"✅ Sonido relevante detectado: {sound_name} ({alert_category}) - Confianza: {confidence:.3f}")
+            elif SOUND_FILTER_CONFIG['include_unknown'] and confidence >= min_confidence:
+                # Incluir sonidos no clasificados si está habilitado
+                filtered_results.append((sound_name, confidence, 'unknown'))
+                custom_logger(f"❓ Sonido no clasificado: {sound_name} - Confianza: {confidence:.3f}")
+        
+        return filtered_results
+
     def analyze_file(self, filepath: str) -> List[Tuple[str, float]]:
         """
         Analyzes a single audio file using YAMNet.
@@ -64,6 +112,30 @@ class YAMNetAudioAnalyzer:
         custom_logger("")
 
         return detailed_results
+
+    def analyze_file_with_filter(self, filepath: str) -> List[Tuple[str, float, str]]:
+        """
+        Analiza un archivo de audio y filtra solo los sonidos relevantes.
+        
+        Args:
+            filepath: Ruta del archivo de audio
+            
+        Returns:
+            Lista de tuplas (sound_name, confidence, alert_category) con solo sonidos relevantes
+        """
+        # Obtener resultados completos de YAMNet
+        all_results = self.analyze_file(filepath)
+        
+        # Filtrar sonidos relevantes
+        filtered_results = self._filter_relevant_sounds(all_results)
+        
+        custom_logger(f"🎯 Sonidos relevantes filtrados para {os.path.basename(filepath)}:")
+        for sound_name, confidence, alert_category in filtered_results:
+            category_emoji = SOUND_FILTER_CONFIG['alert_categories'].get(alert_category, '❓')
+            custom_logger(f"   {category_emoji} {sound_name}: {confidence:.3f} ({alert_category})")
+        custom_logger("")
+        
+        return filtered_results
 
     def analyze_directory(self, folder_path: str) -> List[List[Tuple[str, float]]]:
         """

@@ -20,6 +20,8 @@ class AgentState(TypedDict):
         sound_type: Tipo de sonido detectado (Speech, Music, etc.)
         transcription: Transcripción del audio (si es conversación)
         confidence: Nivel de confianza de la detección
+        alert_category: Categoría de alerta del sonido detectado (danger_alert, attention_alert, etc.)
+        sound_detections: Lista de detecciones de sonidos con sus categorías
     """
     messages: Annotated[List[BaseMessage], operator.add]
     is_conversation_detected: bool
@@ -27,4 +29,6 @@ class AgentState(TypedDict):
     audio_path: str
     sound_type: str
     transcription: str
-    confidence: float 
+    confidence: float
+    alert_category: str
+    sound_detections: List 
