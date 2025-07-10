@@ -1,7 +1,7 @@
-from django.urls import path
-from .views import VehicleTypeCreateView, SoundTypeCreateView
+from rest_framework.routers import DefaultRouter
+from .views import SoundCategoryViewSet
 
-urlpatterns = [
-    path('vehicle-type/', VehicleTypeCreateView.as_view(), name='vehicle_type_create'),
-    path('sound-type/', SoundTypeCreateView.as_view(), name='sound_type_create'),
-]
+router = DefaultRouter()
+router.register(r'categories', SoundCategoryViewSet)
+
+urlpatterns = router.urls

@@ -1,12 +1,6 @@
 from django.contrib import admin
-from .models import VehicleType, SoundType
+from .models import SoundCategory
 
-@admin.register(VehicleType)
-class VehicleTypeAdmin(admin.ModelAdmin):
-    list_display = ('type_name', 'description')
-    search_fields = ('type_name',)
-
-@admin.register(SoundType)
-class SoundTypeAdmin(admin.ModelAdmin):
-    list_display = ('type_name', 'description') 
-    search_fields = ('type_name',) 
+@admin.register(SoundCategory)
+class SoundCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'label', 'emoji')

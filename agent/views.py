@@ -26,6 +26,11 @@ from .providers.text_generation.gemini_text_generation_provider import GeminiTex
 from .providers.text_generation.openai_text_generation_provider import OpenAITextGenerationProvider
 from .providers.text_generation.leonidasmv_text_generation_provider import LeonidasmvTextGenerationProvider
 from .services.intention_classifier_service import IntentionClassifierService
+from rest_framework import viewsets
+from .models import DetectedSound
+from .serializers import DetectedSoundSerializer
+from core.models import SoundCategory
+import numpy as np
 # Configurar logging
 logger = logging.getLogger(__name__)
 
@@ -214,6 +219,66 @@ def process_audio(request):
             "timestamp": final_state.get("timestamp", ""),
             "sound_type": final_state.get("sound_type", "Unknown")
         }
+
+        # Guardar DetectedSound en la base de datos si el sonido es relevante
+        sound_type = final_state.get("sound_type", "Unknown")
+        alert_category = final_state.get("alert_category", "unknown")
+        confidence = final_state.get("confidence", 0.0)
+        transcription = final_state.get("transcription", "")
+        raw_data = final_state.get("sound_detections", [])
+        audio_path = final_state.get("audio_path", "")
+
+        if sound_type.lower() != "unknown":
+            import traceback
+            def sanitize_for_json(obj):
+                if isinstance(obj, dict):
+                    return {k: sanitize_for_json(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [sanitize_for_json(i) for i in obj]
+                elif isinstance(obj, (np.float32, np.float64, float)):
+                    return float(obj)
+                elif isinstance(obj, (np.int32, np.int64, int)):
+                    return int(obj)
+                elif hasattr(obj, 'item') and callable(obj.item):
+                    # numpy scalar
+                    return obj.item()
+                else:
+                    return obj
+            logger.debug(f"Intentando guardar DetectedSound: sound_type={sound_type}, alert_category={alert_category}, confidence={confidence}, transcription={transcription}, audio_path={audio_path}, raw_data={raw_data}")
+            try:
+                category_obj = SoundCategory.objects.get(name=alert_category)
+                sanitized_raw_data = sanitize_for_json(raw_data)
+                try:
+                    ds = DetectedSound.objects.create(
+                        user=request.user,
+                        sound_type=sound_type,
+                        category=category_obj,
+                        confidence=confidence,
+                        transcription=transcription,
+                        raw_data=sanitized_raw_data,
+                        audio_path=audio_path
+                    )
+                    logger.info(f"DetectedSound guardado correctamente: {ds}")
+                except Exception as e:
+                    logger.error(f"Error al guardar DetectedSound (intento 1): {e}\n{traceback.format_exc()}")
+                    # Intentar guardar con raw_data como string si falla la serialización
+                    try:
+                        ds = DetectedSound.objects.create(
+                            user=request.user,
+                            sound_type=sound_type,
+                            category=category_obj,
+                            confidence=confidence,
+                            transcription=transcription,
+                            raw_data=str(sanitized_raw_data),
+                            audio_path=audio_path
+                        )
+                        logger.info(f"DetectedSound guardado (raw_data como string): {ds}")
+                    except Exception as e2:
+                        logger.error(f"Error al guardar DetectedSound (raw_data como string): {e2}\n{traceback.format_exc()}")
+            except SoundCategory.DoesNotExist:
+                logger.warning(f"No se encontró la categoría '{alert_category}' para el sonido detectado. No se guardó DetectedSound.")
+            except Exception as e:
+                logger.error(f"Error inesperado al buscar categoría o guardar DetectedSound: {e}\n{traceback.format_exc()}")
         
         # Preparar respuesta - solo incluir mensajes únicos y relevantes
         messages = final_state.get("messages", [])
@@ -444,3 +509,13 @@ def process_audio_legacy(request):
             },
             status=500
         )
+
+class DetectedSoundViewSet(viewsets.ModelViewSet):
+    queryset = DetectedSound.objects.none()  # Necesario para DRF basename
+    serializer_class = DetectedSoundSerializer
+
+    def get_queryset(self):
+        return DetectedSound.objects.filter(user=self.request.user).order_by('-timestamp')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

@@ -1,12 +1,7 @@
 from rest_framework import serializers
-from .models import VehicleType, SoundType
+from .models import SoundCategory
 
-class VehicleTypeSerializer(serializers.ModelSerializer):
+class SoundCategorySerializer(serializers.ModelSerializer):
     class Meta:
-        model = VehicleType
-        fields = '__all__'
-
-class SoundTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SoundType
+        model = SoundCategory
         fields = '__all__'
