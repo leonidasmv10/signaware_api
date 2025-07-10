@@ -22,3 +22,4 @@ daphne signaware_api.asgi:application
 
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121/
 python manage.py populate_soundcategories
+python manage.py populate_sound_types

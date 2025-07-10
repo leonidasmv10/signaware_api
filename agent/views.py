@@ -29,7 +29,7 @@ from .services.intention_classifier_service import IntentionClassifierService
 from rest_framework import viewsets
 from .models import DetectedSound
 from .serializers import DetectedSoundSerializer
-from core.models import SoundCategory
+from core.models import SoundCategory, SoundType
 import numpy as np
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -43,6 +43,9 @@ GEMINI_PROVIDER = GeminiTextGenerationProvider()
 OPENAI_PROVIDER = OpenAITextGenerationProvider()
 LEONIDASMV_PROVIDER = LeonidasmvTextGenerationProvider()
 INTENTION_CLASSIFIER_SERVICE = IntentionClassifierService()
+
+def normalize_sound_type_name(name):
+    return name.strip().lower().replace(' ', '_')
 
 class AgentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -228,53 +231,42 @@ def process_audio(request):
         raw_data = final_state.get("sound_detections", [])
         audio_path = final_state.get("audio_path", "")
 
+        # Inicializar variables para el label en español
+        sound_type_label = "Desconocido"  # Valor por defecto
+        sound_type_obj = None
+
         if sound_type.lower() != "unknown":
             import traceback
-            def sanitize_for_json(obj):
-                if isinstance(obj, dict):
-                    return {k: sanitize_for_json(v) for k, v in obj.items()}
-                elif isinstance(obj, list):
-                    return [sanitize_for_json(i) for i in obj]
-                elif isinstance(obj, (np.float32, np.float64, float)):
-                    return float(obj)
-                elif isinstance(obj, (np.int32, np.int64, int)):
-                    return int(obj)
-                elif hasattr(obj, 'item') and callable(obj.item):
-                    # numpy scalar
-                    return obj.item()
-                else:
-                    return obj
-            logger.debug(f"Intentando guardar DetectedSound: sound_type={sound_type}, alert_category={alert_category}, confidence={confidence}, transcription={transcription}, audio_path={audio_path}, raw_data={raw_data}")
+            
+            logger.debug(f"Intentando guardar DetectedSound: sound_type={sound_type}, alert_category={alert_category}, confidence={confidence}, transcription={transcription}")
+            
             try:
                 category_obj = SoundCategory.objects.get(name=alert_category)
-                sanitized_raw_data = sanitize_for_json(raw_data)
+                normalized_name = normalize_sound_type_name(sound_type)
+                # Buscar el SoundType por nombre normalizado
+                try:
+                    sound_type_obj = SoundType.objects.get(name=normalized_name)
+                    sound_type_label = sound_type_obj.label  # Obtener el label en español
+                except SoundType.DoesNotExist:
+                    # Si no existe, crear uno nuevo SOLO para pruebas/desarrollo
+                    sound_type_obj = SoundType.objects.create(
+                        name=normalized_name,
+                        label=sound_type,  # Si no hay label en español, usar el detectado
+                        description=f'Sonido detectado: {sound_type}',
+                        is_critical=alert_category in ['siren', 'car_horn', 'gun_shot', 'glass_breaking']
+                    )
+                    sound_type_label = sound_type_obj.label
                 try:
                     ds = DetectedSound.objects.create(
                         user=request.user,
-                        sound_type=sound_type,
+                        sound_type=sound_type_obj,
                         category=category_obj,
                         confidence=confidence,
-                        transcription=transcription,
-                        raw_data=sanitized_raw_data,
-                        audio_path=audio_path
+                        transcription=transcription
                     )
                     logger.info(f"DetectedSound guardado correctamente: {ds}")
                 except Exception as e:
-                    logger.error(f"Error al guardar DetectedSound (intento 1): {e}\n{traceback.format_exc()}")
-                    # Intentar guardar con raw_data como string si falla la serialización
-                    try:
-                        ds = DetectedSound.objects.create(
-                            user=request.user,
-                            sound_type=sound_type,
-                            category=category_obj,
-                            confidence=confidence,
-                            transcription=transcription,
-                            raw_data=str(sanitized_raw_data),
-                            audio_path=audio_path
-                        )
-                        logger.info(f"DetectedSound guardado (raw_data como string): {ds}")
-                    except Exception as e2:
-                        logger.error(f"Error al guardar DetectedSound (raw_data como string): {e2}\n{traceback.format_exc()}")
+                    logger.error(f"Error al guardar DetectedSound: {e}\n{traceback.format_exc()}")
             except SoundCategory.DoesNotExist:
                 logger.warning(f"No se encontró la categoría '{alert_category}' para el sonido detectado. No se guardó DetectedSound.")
             except Exception as e:
@@ -295,6 +287,7 @@ def process_audio(request):
             "user_id": request.user.id,
             "audio_id": audio_id,
             "sound_type": final_state.get("sound_type", "Unknown"),
+            "sound_type_label": sound_type_label,  # <-- SIEMPRE INCLUIR EL LABEL EN ESPAÑOL
             "confidence": final_state.get("confidence", 0.0),
             "alert_category": final_state.get("alert_category", "unknown"),
             "is_conversation_detected": final_state.get("is_conversation_detected", False),
