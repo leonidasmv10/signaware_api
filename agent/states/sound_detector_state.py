@@ -8,7 +8,7 @@ import operator
 from langchain_core.messages import BaseMessage
 
 
-class AgentState(TypedDict):
+class SoundDetectorState(TypedDict):
     """
     Representa el estado actual del asistente de audio inteligente.
     

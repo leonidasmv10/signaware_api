@@ -18,3 +18,4 @@ accelerate
 bitsandbytes
 sentencepiece
 seaborn
+sounddevice

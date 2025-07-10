@@ -18,13 +18,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from langchain_core.messages import HumanMessage
-from .workflow import compiled_workflow, get_initial_state
+from .workflows.sound_detector_workflow import SoundDetectorWorkflow
 from rest_framework.views import APIView
 import dotenv
-from agent.logic.sound_detector_agent import SoundDetectorAgent
-from .providers.text_generation.gemini_text_generation_provider import GeminiTextGenerationProvider
-from .providers.text_generation.openai_text_generation_provider import OpenAITextGenerationProvider
-from .providers.text_generation.leonidasmv_text_generation_provider import LeonidasmvTextGenerationProvider
+from .logic.agent_manager import agent_manager
+from .providers.text_generation.text_generator_manager import text_generator_manager
 from .services.intention_classifier_service import IntentionClassifierService
 from rest_framework import viewsets
 from .models import DetectedSound
@@ -37,12 +35,16 @@ logger = logging.getLogger(__name__)
 # Almacenamiento temporal de audios procesados (en producción usar base de datos)
 processed_audios = {}
 
-
-SOUND_DETECTOR_AGENT = SoundDetectorAgent()
-GEMINI_PROVIDER = GeminiTextGenerationProvider()
-OPENAI_PROVIDER = OpenAITextGenerationProvider()
-LEONIDASMV_PROVIDER = LeonidasmvTextGenerationProvider()
+# Instancias globales
 INTENTION_CLASSIFIER_SERVICE = IntentionClassifierService()
+
+# Instancia global del workflow
+try:
+    WORKFLOW_INSTANCE = SoundDetectorWorkflow()
+    logger.info("Workflow inicializado exitosamente")
+except Exception as e:
+    logger.error(f"Error inicializando workflow: {e}")
+    WORKFLOW_INSTANCE = None
 
 def normalize_sound_type_name(name):
     return name.strip().lower().replace(' ', '_')
@@ -59,15 +61,15 @@ class AgentView(APIView):
         try:
             if model == "openai":
                 try:
-                    # response = OPENAI_PROVIDER.execute(user_message)
+                    # response = text_generator_manager.execute_generator("openai", user_message)
                     response = INTENTION_CLASSIFIER_SERVICE.execute(user_message)
                 except Exception as e:
-                    logger.error(f"Error en OpenAI/IntentionClassifier: {e}")
+                    logger.error(f"Error en OpenAI: {e}")
                     return Response({"error": f"Error en el modelo OpenAI: {str(e)}"}, status=500)
                     
             elif model == "leonidasmv":
                 try:
-                    # response = LEONIDASMV_PROVIDER.execute(user_message)
+                    # Para Leonidasmv, usar el agente de detección de sonidos
                     audio_file_path_to_load = r"C:\Users\yordy\Documents\dev\bootcamp\inteligencia_artificial\keepcoding\signaware\signaware_api\agent\test\audio_fragments\dialogo dos personas.wav"
 
                     audio_data, samplerate = sf.read(audio_file_path_to_load)
@@ -75,7 +77,7 @@ class AgentView(APIView):
                     audio_path = audio_file_path_to_load
                     audio_file = audio_data
 
-                    response = SOUND_DETECTOR_AGENT.execute(user_message, audio_path, audio_file)
+                    response = agent_manager.execute_agent("sound_detector", user_message, audio_path=audio_path, audio_file=audio_file)
                 except FileNotFoundError as e:
                     logger.error(f"Archivo de audio no encontrado: {e}")
                     return Response({"error": "Archivo de audio de prueba no encontrado"}, status=500)
@@ -83,9 +85,9 @@ class AgentView(APIView):
                     logger.error(f"Error en Leonidasmv/SoundDetector: {e}")
                     return Response({"error": f"Error en el modelo Leonidasmv: {str(e)}"}, status=500)
                     
-            else:  # gemini
+            else:  # gemini (default)
                 try:
-                    response = GEMINI_PROVIDER.execute(user_message)
+                    response = text_generator_manager.execute_generator("gemini", user_message)
                 except Exception as e:
                     logger.error(f"Error en Gemini: {e}")
                     return Response({"error": f"Error en el modelo Gemini: {str(e)}"}, status=500)
@@ -158,7 +160,7 @@ def process_audio(request):
         logger.info(f"FILES keys: {list(request.FILES.keys())}")
         
         # Verificar que el workflow esté disponible
-        if compiled_workflow is None:
+        if WORKFLOW_INSTANCE is None or WORKFLOW_INSTANCE.compiled_workflow is None:
             logger.error("Workflow no disponible")
             return Response(
                 {"error": "Sistema de procesamiento de audio no disponible"},
@@ -206,11 +208,11 @@ def process_audio(request):
         logger.info(f"Archivo de audio válido: {audio_file.name} ({audio_file.size} bytes)")
         
         # Ejecutar el workflow del agente
-        initial_state = get_initial_state()
+        initial_state = WORKFLOW_INSTANCE.get_initial_state()
         initial_state["audio_file"] = audio_file
         
         logger.info("Ejecutando workflow del agente")
-        final_state = compiled_workflow.invoke(initial_state)
+        final_state = WORKFLOW_INSTANCE.execute(initial_state)
         
         # Generar ID único para el audio
         audio_id = str(uuid.uuid4())
@@ -419,8 +421,8 @@ def health_check(request):
     """
     try:
         status_data = {
-            "status": "healthy" if compiled_workflow is not None else "unavailable",
-            "workflow_compiled": compiled_workflow is not None,
+            "status": "healthy" if WORKFLOW_INSTANCE is not None and WORKFLOW_INSTANCE.compiled_workflow is not None else "unavailable",
+            "workflow_compiled": WORKFLOW_INSTANCE is not None and WORKFLOW_INSTANCE.compiled_workflow is not None,
             "user_id": request.user.id
         }
         
@@ -428,6 +430,64 @@ def health_check(request):
         
     except Exception as e:
         logger.error(f"Error en health check: {e}")
+        return Response(
+            {"status": "error", "error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def agents_status(request):
+    """
+    Endpoint para obtener el estado de todos los agentes.
+    
+    Returns:
+        Response: Estado de todos los agentes disponibles
+    """
+    try:
+        if agent_manager is None:
+            return Response(
+                {"error": "Agent manager no disponible"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        
+        status_data = agent_manager.get_manager_status()
+        status_data["user_id"] = request.user.id
+        
+        return Response(status_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo estado de agentes: {e}")
+        return Response(
+            {"status": "error", "error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def text_generators_status(request):
+    """
+    Endpoint para obtener el estado de todos los generadores de texto.
+    
+    Returns:
+        Response: Estado de todos los generadores de texto disponibles
+    """
+    try:
+        if text_generator_manager is None:
+            return Response(
+                {"error": "Text generator manager no disponible"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        
+        status_data = text_generator_manager.get_manager_status()
+        status_data["user_id"] = request.user.id
+        
+        return Response(status_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo estado de generadores de texto: {e}")
         return Response(
             {"status": "error", "error": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -450,7 +510,7 @@ def process_audio_legacy(request):
         logger.info("Iniciando procesamiento de audio (legacy)")
         
         # Verificar que el workflow esté disponible
-        if compiled_workflow is None:
+        if WORKFLOW_INSTANCE is None or WORKFLOW_INSTANCE.compiled_workflow is None:
             logger.error("Workflow no disponible")
             return JsonResponse(
                 {"error": "Sistema de procesamiento de audio no disponible"},
@@ -468,10 +528,10 @@ def process_audio_legacy(request):
         audio_file = request.FILES['audio']
         
         # Ejecutar el workflow del agente
-        initial_state = get_initial_state()
+        initial_state = WORKFLOW_INSTANCE.get_initial_state()
         initial_state["audio_file"] = audio_file
         
-        final_state = compiled_workflow.invoke(initial_state)
+        final_state = WORKFLOW_INSTANCE.execute(initial_state)
         
         # Preparar respuesta
         response_data = {

@@ -6,14 +6,10 @@ from ..workflows.sound_detector_workflow import SoundDetectorWorkflow
 from .base_agent import BaseAgent
 
 
-class SoundDetectorAgent(BaseAgent):
-    """
-    Agente especializado para la detección de sonidos.
-    Coordina el workflow de procesamiento de audio y análisis de sonidos.
-    """
-    
+class ChatbotAgent(BaseAgent):
+   
     def _setup_components(self):
-        """Configura los componentes específicos del agente de detección de sonidos."""
+        """Configura los componentes específicos del agente"""
         # Inicializar generadores de texto a través del manager
         self.text_generator_manager = text_generator_manager
         self.intention_classifier_service = IntentionClassifierService()
