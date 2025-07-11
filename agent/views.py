@@ -75,7 +75,7 @@ class AgentView(APIView):
                         generator_name="openai", prompt=user_message
                     )
                 except Exception as e:
-                    logger.error(f"Error en OpenAI/IntentionClassifier: {e}")
+                    logger.error(f"Error en OpenAI: {e}")
                     return Response(
                         {"error": f"Error en el modelo OpenAI: {str(e)}"}, status=500
                     )
@@ -86,7 +86,7 @@ class AgentView(APIView):
                         generator_name="leonidasmv", prompt=user_message
                     )
                 except Exception as e:
-                    logger.error(f"Error en Leonidasmv/SoundDetector: {e}")
+                    logger.error(f"Error en Leonidasmv: {e}")
                     return Response(
                         {"error": f"Error en el modelo Leonidasmv: {str(e)}"},
                         status=500,
