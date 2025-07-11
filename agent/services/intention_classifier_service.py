@@ -4,14 +4,24 @@ import shutil
 import numpy as np
 import io
 from uuid import uuid4
-from agent.providers.text_generation.gemini_text_generation_provider import (
-    GeminiTextGenerationProvider,
+from agent.providers.text_generation.text_generator_manager import (
+    text_generator_manager,
 )
 
 
 class IntentionClassifierService:
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(IntentionClassifierService, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
     def __init__(self):
-        self.text_generation_provider = GeminiTextGenerationProvider()
+        if not self._initialized:
+            self.text_generator_manager = text_generator_manager
+            self._initialized = True
 
     def get_intent_prompt(self, user_input):
         """Genera el prompt para clasificar la intención del usuario"""
@@ -43,7 +53,7 @@ class IntentionClassifierService:
             prompt = self.get_intent_prompt(user_input)
 
             # Generar respuesta
-            response = self.text_generation_provider.execute(prompt)
+            response = self.text_generator_manager.execute_generator("gemini", prompt)
 
             # Extraer y limpiar la respuesta
             intent = response.strip().upper()

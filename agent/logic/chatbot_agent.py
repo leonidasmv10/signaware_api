@@ -2,7 +2,7 @@ from ..providers.text_generation.text_generator_manager import text_generator_ma
 from ..services.intention_classifier_service import (
     IntentionClassifierService,
 )
-from ..workflows.sound_detector_workflow import SoundDetectorWorkflow
+from ..workflows.chatbot_worklow import ChatbotWorkflow
 from .base_agent import BaseAgent
 
 
@@ -15,86 +15,109 @@ class ChatbotAgent(BaseAgent):
         self.intention_classifier_service = IntentionClassifierService()
         
         # Inicializar workflow
-        self.workflow = SoundDetectorWorkflow()
+        self.workflow = ChatbotWorkflow()
         
-        # Configurar parámetros específicos del agente
-        self.supported_audio_formats = ['wav', 'mp3', 'mpeg', 'ogg']
-        self.max_audio_size_mb = 50  # Tamaño máximo de archivo en MB
+        # Pasar la instancia del clasificador a los nodos
+        self.workflow.nodes.intention_classifier = self.intention_classifier_service
+        
 
-    def execute(self, user_input: str, **kwargs) -> str:
+    def execute(self, user_input: str) -> str:
         """
-        Ejecuta el workflow de detección de sonidos.
+        Ejecuta el workflow del chatbot con detector de intenciones.
         
         Args:
-            user_input: Entrada del usuario (opcional para este agente)
-            **kwargs: Argumentos adicionales que deben incluir:
-                - audio_path: Ruta del archivo de audio
-                - audio_file: Archivo de audio subido
+            user_input: Entrada del usuario
                 
         Returns:
-            str: Tipo de sonido detectado
+            str: Respuesta del chatbot
         """
         try:
-            # Extraer argumentos específicos
-            audio_path = kwargs.get('audio_path')
-            audio_file = kwargs.get('audio_file')
-            
-            # Validar argumentos requeridos
-            if not audio_path and not audio_file:
-                raise ValueError("Se requiere audio_path o audio_file para la detección de sonidos")
-            
             # Obtener estado inicial
             initial_state = self.workflow.get_initial_state()
             
             # Configurar el estado con los datos de entrada
-            if audio_path:
-                initial_state["audio_path"] = audio_path
-            if audio_file:
-                initial_state["audio_file"] = audio_file
+            initial_state["user_input"] = user_input
 
             # Ejecutar el workflow
             final_state = self.workflow.execute(initial_state)
             
             # Obtener resultado
-            sound_type = final_state.get("sound_type", "Unknown")
-            confidence = final_state.get("confidence", 0.0)
+            response = final_state.get("response", "No se pudo generar una respuesta.")
+            # detected_intent = final_state.get("detected_intent", "GENERAL_QUERY")
             
-            # Formatear respuesta
-            result = f"Tipo de sonido detectado: {sound_type} (confianza: {confidence:.2f})"
+            # # Formatear respuesta
+            # result = f"🤖 Chatbot: {response}\n\n📋 Intención detectada: {detected_intent}"
             
-            return result
+            return response
             
         except Exception as e:
-            error_msg = f"❌ Error al clasificar intención: {e}"
+            error_msg = f"❌ Error en el chatbot: {e}"
             print(error_msg)
-            return "GENERAL_QUERY"
+            return "Lo siento, no pude procesar tu consulta. ¿Podrías intentar de nuevo?"
     
-    def validate_audio_file(self, audio_file) -> bool:
+    def chat(self, user_input: str) -> dict:
         """
-        Valida si el archivo de audio es compatible.
+        Método específico para chat.
         
         Args:
-            audio_file: Archivo de audio a validar
+            user_input: Entrada del usuario
             
         Returns:
-            bool: True si el archivo es válido
+            dict: Respuesta con información detallada
         """
-        if not audio_file:
-            return False
+        try:
+            # Obtener estado inicial
+            initial_state = self.workflow.get_initial_state()
+            initial_state["user_input"] = user_input
+
+            # Ejecutar el workflow
+            final_state = self.workflow.execute(initial_state)
+            
+            # Preparar respuesta
+            response = {
+                "response": final_state.get("response", "No se pudo generar una respuesta."),
+                "detected_intent": final_state.get("detected_intent", "GENERAL_QUERY"),
+                "conversation_history": final_state.get("conversation_history", []),
+                "messages": final_state.get("messages", [])
+            }
+            
+            return response
+            
+        except Exception as e:
+            error_msg = f"❌ Error en el chat: {e}"
+            print(error_msg)
+            return {
+                "response": "Lo siento, no pude procesar tu consulta. ¿Podrías intentar de nuevo?",
+                "detected_intent": "GENERAL_QUERY",
+                "conversation_history": [],
+                "messages": []
+            }
+    
+    def get_conversation_history(self) -> list:
+        """
+        Obtiene el historial de conversación.
         
-        # Verificar tamaño
-        if hasattr(audio_file, 'size'):
-            max_size_bytes = self.max_audio_size_mb * 1024 * 1024
-            if audio_file.size > max_size_bytes:
-                return False
-        
-        # Verificar formato
-        if hasattr(audio_file, 'name'):
-            file_extension = audio_file.name.lower().split('.')[-1]
-            if file_extension not in self.supported_audio_formats:
-                return False
-        
-        return True
+        Returns:
+            list: Historial de conversación
+        """
+        try:
+            # Obtener estado inicial
+            initial_state = self.workflow.get_initial_state()
+            return initial_state.get("conversation_history", [])
+        except Exception as e:
+            print(f"❌ Error obteniendo historial: {e}")
+            return []
+    
+    def clear_conversation_history(self):
+        """Limpia el historial de conversación."""
+        try:
+            # Obtener estado inicial limpio
+            initial_state = self.workflow.get_initial_state()
+            initial_state["conversation_history"] = []
+            initial_state["messages"] = []
+            print("✅ Historial de conversación limpiado")
+        except Exception as e:
+            print(f"❌ Error limpiando historial: {e}")
     
     def get_detailed_status(self) -> dict:
         """
@@ -105,12 +128,14 @@ class ChatbotAgent(BaseAgent):
         """
         base_status = self.get_status()
         base_status.update({
-            "supported_formats": self.supported_audio_formats,
-            "max_audio_size_mb": self.max_audio_size_mb,
             "workflow_initialized": self.workflow.compiled_workflow is not None,
             "components_initialized": {
                 "text_generator_manager": self.text_generator_manager is not None,
                 "intention_classifier": self.intention_classifier_service.is_initialized if hasattr(self.intention_classifier_service, 'is_initialized') else True
+            },
+            "chatbot_features": {
+                "intent_detection": True,
+                "conversation_history": True
             }
         })
         return base_status

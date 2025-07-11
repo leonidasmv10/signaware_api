@@ -20,17 +20,6 @@ from rest_framework import status
 from langchain_core.messages import HumanMessage
 from rest_framework.views import APIView
 import dotenv
-from agent.logic.sound_detector_agent import SoundDetectorAgent
-from .providers.text_generation.gemini_text_generation_provider import (
-    GeminiTextGenerationProvider,
-)
-from .providers.text_generation.openai_text_generation_provider import (
-    OpenAITextGenerationProvider,
-)
-from .providers.text_generation.leonidasmv_text_generation_provider import (
-    LeonidasmvTextGenerationProvider,
-)
-from .services.intention_classifier_service import IntentionClassifierService
 from rest_framework import viewsets
 from .models import DetectedSound
 from .serializers import DetectedSoundSerializer
@@ -45,12 +34,6 @@ logger = logging.getLogger(__name__)
 # Almacenamiento temporal de audios procesados (en producción usar base de datos)
 processed_audios = {}
 
-
-SOUND_DETECTOR_AGENT = SoundDetectorAgent()
-GEMINI_PROVIDER = GeminiTextGenerationProvider()
-OPENAI_PROVIDER = OpenAITextGenerationProvider()
-LEONIDASMV_PROVIDER = LeonidasmvTextGenerationProvider()
-INTENTION_CLASSIFIER_SERVICE = IntentionClassifierService()
 
 AGENT_MANAGER = AgentManager()
 
@@ -82,8 +65,8 @@ class AgentView(APIView):
 
             elif model == "leonidasmv":
                 try:
-                    response = text_generator_manager.execute_generator(
-                        generator_name="leonidasmv", prompt=user_message
+                    response = AGENT_MANAGER.execute_agent(
+                        agent_name="chatbot", user_input=user_message
                     )
                 except Exception as e:
                     logger.error(f"Error en Leonidasmv: {e}")
@@ -92,7 +75,7 @@ class AgentView(APIView):
                         status=500,
                     )
 
-            else:  # gemini
+            else:
                 try:
                     response = text_generator_manager.execute_generator(
                         generator_name="gemini", prompt=user_message

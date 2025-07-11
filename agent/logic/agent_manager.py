@@ -8,6 +8,7 @@ import logging
 from typing import Dict, Any, Optional, Type
 from .base_agent import BaseAgent
 from .sound_detector_agent import SoundDetectorAgent
+from .chatbot_agent import ChatbotAgent
 
 
 class AgentManager:
@@ -39,6 +40,7 @@ class AgentManager:
         try:
             # Registrar agentes disponibles
             self._register_agent("sound_detector", SoundDetectorAgent())
+            self._register_agent("chatbot", ChatbotAgent())
             
             self.logger.info(f"Agentes inicializados: {list(self.agents.keys())}")
             
