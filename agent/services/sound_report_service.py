@@ -275,37 +275,74 @@ class SoundReportService:
         """Genera recomendaciones basadas en los datos del reporte"""
         recommendations = []
         
-        # Recomendaciones basadas en sonidos críticos
+        # Recomendaciones basadas en sonidos críticos específicos
         if critical_sounds:
-            recommendations.append(
-                "🚨 Se detectaron sonidos críticos. Considera revisar tu entorno y configurar alertas adicionales."
-            )
-        
-        # Recomendaciones basadas en patrones temporales
-        if temporal_patterns['recent_activity']['last_24h_detections'] > 50:
-            recommendations.append(
-                "📊 Alta actividad de sonidos en las últimas 24 horas. Considera ajustar la sensibilidad del detector."
-            )
-        
-        # Recomendaciones basadas en tipos de sonido más frecuentes
-        if sound_stats:
-            most_frequent = sound_stats[0]
-            if most_frequent['count'] > 20:
+            critical_sound = critical_sounds[0]['sound_type']
+            if 'sirena' in critical_sound.lower():
                 recommendations.append(
-                    f"🔊 El sonido '{most_frequent['label']}' es muy frecuente. Considera configurar alertas específicas."
+                    "🚨 **¡Emergencia detectada!** Busca señales visuales de emergencia y sigue las indicaciones de evacuación."
+                )
+            elif 'alarma' in critical_sound.lower():
+                recommendations.append(
+                    "🚨 **¡Alarma activada!** Busca luces parpadeantes y sigue las rutas de evacuación marcadas."
+                )
+            else:
+                recommendations.append(
+                    f"🚨 **¡Sonido crítico detectado!** Mantén la calma y busca información visual sobre la situación."
                 )
         
-        # Recomendaciones basadas en confianza promedio
-        avg_confidence = sum(stat['avg_confidence'] for stat in sound_stats) / len(sound_stats) if sound_stats else 0
-        if avg_confidence < 0.7:
+        # Recomendaciones basadas en el sonido más frecuente
+        if sound_stats:
+            most_frequent = sound_stats[0]
+            if 'perro' in most_frequent['label'].lower():
+                recommendations.append(
+                    "🐕 **¡Perros cerca!** Mantén distancia y busca señales visuales del dueño antes de acercarte."
+                )
+            elif 'bocina' in most_frequent['label'].lower() or 'claxon' in most_frequent['label'].lower():
+                recommendations.append(
+                    "🚗 **¡Tráfico activo!** Usa siempre los cruces peatonales y espera las luces verdes."
+                )
+            elif 'timbre' in most_frequent['label'].lower():
+                recommendations.append(
+                    "🔔 **¡Timbre frecuente!** Considera instalar una luz parpadeante para saber cuándo llegan visitas."
+                )
+            elif most_frequent['count'] >= 3:
+                recommendations.append(
+                    f"🔊 **{most_frequent['label']} frecuente.** Busca patrones visuales para anticiparte a este sonido."
+                )
+            elif most_frequent['count'] == 1:
+                recommendations.append(
+                    "✅ **Entorno tranquilo.** Aprovecha para practicar lectura labial o lenguaje de señas."
+                )
+        
+        # Recomendaciones basadas en actividad
+        if temporal_patterns['recent_activity']['last_24h_detections'] > 10:
             recommendations.append(
-                "⚠️ La confianza promedio de detección es baja. Considera mejorar la calidad del audio o ajustar el modelo."
+                "📊 **Entorno muy activo.** Considera usar vibraciones en tu teléfono para alertas importantes."
+            )
+        elif temporal_patterns['recent_activity']['last_24h_detections'] == 0:
+            recommendations.append(
+                "🌙 **Entorno muy tranquilo.** Perfecto para practicar comunicación visual con familiares."
             )
         
-        # Recomendaciones generales
+        # Recomendaciones basadas en tipos de sonido específicos
+        if sound_stats:
+            vehicle_sounds = [s for s in sound_stats if any(word in s['label'].lower() for word in ['bocina', 'claxon', 'sirena', 'vehículo', 'coche', 'car'])]
+            if vehicle_sounds:
+                recommendations.append(
+                    "🚗 **Zona de tráfico.** Siempre cruza con compañía o usa apps de asistencia para peatones."
+                )
+            
+            alarm_sounds = [s for s in sound_stats if any(word in s['label'].lower() for word in ['alarma', 'emergencia', 'incendio', 'evacuación'])]
+            if alarm_sounds:
+                recommendations.append(
+                    "🚨 **Zona con alarmas.** Aprende las señales visuales de emergencia de tu edificio."
+                )
+        
+        # Recomendación general si no hay otras
         if not recommendations:
             recommendations.append(
-                "✅ El sistema está funcionando normalmente. No se requieren acciones inmediatas."
+                "✅ Tu entorno está bien controlado. ¡Sigue así!"
             )
         
         return recommendations

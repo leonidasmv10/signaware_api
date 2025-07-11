@@ -82,7 +82,9 @@ class ChatbotNodes:
             Máximo 3-4 líneas. ¡Sé positivo y alentador!
             """
             
-            response = text_generator_manager.execute_generator("gemini", prompt)
+            # Obtener el generador del estado o usar gemini por defecto
+            generator = state.get("text_generator_model", "gemini")
+            response = text_generator_manager.execute_generator(generator, prompt)
             state["response"] = response
             self._update_conversation_history(state, "HEARING_AIDS")
             
@@ -119,7 +121,9 @@ class ChatbotNodes:
             Máximo 3-4 líneas. ¡Sé positivo y alentador!
             """
             
-            response = text_generator_manager.execute_generator("gemini", prompt)
+            # Obtener el generador del estado o usar gemini por defecto
+            generator = state.get("text_generator_model", "gemini")
+            response = text_generator_manager.execute_generator(generator, prompt)
             state["response"] = response
             self._update_conversation_history(state, "VISUAL_SIGNALS")
             
@@ -156,7 +160,9 @@ class ChatbotNodes:
             Máximo 3-4 líneas. ¡Sé positivo y alentador!
             """
             
-            response = text_generator_manager.execute_generator("gemini", prompt)
+            # Obtener el generador del estado o usar gemini por defecto
+            generator = state.get("text_generator_model", "gemini")
+            response = text_generator_manager.execute_generator(generator, prompt)
             state["response"] = response
             self._update_conversation_history(state, "AUDIO_TRANSLATION")
             
@@ -193,7 +199,9 @@ class ChatbotNodes:
             Máximo 3-4 líneas. ¡Sé positivo y alentador!
             """
             
-            response = text_generator_manager.execute_generator("gemini", prompt)
+            # Obtener el generador del estado o usar gemini por defecto
+            generator = state.get("text_generator_model", "gemini")
+            response = text_generator_manager.execute_generator(generator, prompt)
             state["response"] = response
             self._update_conversation_history(state, "MEDICAL_CENTER")
             
@@ -230,7 +238,9 @@ class ChatbotNodes:
             Máximo 3-4 líneas. ¡Sé positivo y alentador!
             """
             
-            response = text_generator_manager.execute_generator("gemini", prompt)
+            # Obtener el generador del estado o usar gemini por defecto
+            generator = state.get("text_generator_model", "gemini")
+            response = text_generator_manager.execute_generator(generator, prompt)
             state["response"] = response
             self._update_conversation_history(state, "RECOMMEND_APP")
             
@@ -267,7 +277,9 @@ class ChatbotNodes:
             Máximo 3-4 líneas. ¡Sé positivo y alentador!
             """
             
-            response = text_generator_manager.execute_generator("gemini", prompt)
+            # Obtener el generador del estado o usar gemini por defecto
+            generator = state.get("text_generator_model", "gemini")
+            response = text_generator_manager.execute_generator(generator, prompt)
             state["response"] = response
             self._update_conversation_history(state, "KNOW_RIGHTS")
             
@@ -304,7 +316,9 @@ class ChatbotNodes:
             Máximo 3-4 líneas. ¡Sé positivo y alentador!
             """
             
-            response = text_generator_manager.execute_generator("gemini", prompt)
+            # Obtener el generador del estado o usar gemini por defecto
+            generator = state.get("text_generator_model", "gemini")
+            response = text_generator_manager.execute_generator(generator, prompt)
             state["response"] = response
             self._update_conversation_history(state, "CERTIFICATE")
             
@@ -327,7 +341,7 @@ class ChatbotNodes:
             sound_report_service = SoundReportService()
             
             # Extraer parámetros del usuario (si los especifica)
-            days = 30  # Por defecto 30 días
+            days = 1  # Por defecto 1 día (hoy)
             user_id = None  # Por defecto todos los usuarios
             
             # Buscar parámetros en el input del usuario
@@ -337,6 +351,12 @@ class ChatbotNodes:
                 days_match = re.search(r'(\d+)\s*días?', user_input.lower())
                 if days_match:
                     days = int(days_match.group(1))
+            elif "hoy" in user_input.lower() or "today" in user_input.lower():
+                days = 1
+            elif "semana" in user_input.lower() or "week" in user_input.lower():
+                days = 7
+            elif "mes" in user_input.lower() or "month" in user_input.lower():
+                days = 30
             
             # Generar reporte
             report = sound_report_service.generate_sound_report(user_id=user_id, days=days)
@@ -363,7 +383,9 @@ class ChatbotNodes:
                 Máximo 3-4 líneas. ¡Sé positivo y alentador!
                 """
                 
-                response = text_generator_manager.execute_generator("gemini", prompt)
+                # Obtener el generador del estado o usar gemini por defecto
+                generator = state.get("text_generator_model", "gemini")
+                response = text_generator_manager.execute_generator(generator, prompt)
                 state["response"] = response
                 self._update_conversation_history(state, "SOUND_REPORT")
                 
@@ -372,7 +394,9 @@ class ChatbotNodes:
             # Generar prompt con datos del reporte
             prompt = self._generate_sound_report_prompt(user_input, report)
             
-            response = text_generator_manager.execute_generator("gemini", prompt)
+            # Obtener el generador del estado o usar gemini por defecto
+            generator = state.get("text_generator_model", "gemini")
+            response = text_generator_manager.execute_generator(generator, prompt)
             state["response"] = response
             self._update_conversation_history(state, "SOUND_REPORT")
             
@@ -400,10 +424,10 @@ class ChatbotNodes:
         # Top 5 sonidos más frecuentes
         top_sounds = ""
         if sound_stats:
-            top_sounds = "**🎯 Top 5 Sonidos Detectados:**\n"
+            top_sounds = "**🎯 Top 5 Sonidos Detectados:**\n\n"
             for i, stat in enumerate(sound_stats[:5], 1):
                 emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "4️⃣" if i == 4 else "5️⃣"
-                top_sounds += f"{emoji} **{stat['label']}**: `{stat['count']} veces`\n"
+                top_sounds += f"{emoji} **{stat['label']}**: `{stat['count']} veces`\n\n"
         
         # Sonido crítico reciente
         critical_info = ""
@@ -432,6 +456,8 @@ class ChatbotNodes:
         - > Citas para destacar información
         - Listas con • o - para organizar datos
         
+        **Período del reporte:** {self._get_period_description(days)}
+        
         Datos del reporte:
         - **📊 Total:** `{total_detections} detecciones` en `{days} días`
         {top_sounds}
@@ -443,10 +469,27 @@ class ChatbotNodes:
         - Una recomendación útil
         - Un mensaje de apoyo
         
+        **Al final, agrega un chiste o dato curioso** basado en los sonidos detectados:
+        - Compara dos tipos de sonidos de forma divertida
+        - Menciona algo curioso sobre el patrón de sonidos
+        - Haz una observación amigable sobre el entorno
+        - Usa emojis y mantén el tono positivo
+        
         ¡Sé positivo y alentador! 💪
         """
         
         return prompt
+
+    def _get_period_description(self, days: int) -> str:
+        """Genera una descripción amigable del período del reporte"""
+        if days == 1:
+            return "**📅 Hoy**"
+        elif days == 7:
+            return "**📅 Última semana**"
+        elif days == 30:
+            return "**📅 Último mes**"
+        else:
+            return f"**📅 Últimos {days} días**"
 
     def general_query_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Nodo para consultas generales"""
@@ -474,7 +517,9 @@ class ChatbotNodes:
             Máximo 3-4 líneas. ¡Sé positivo y alentador!
             """
             
-            response = text_generator_manager.execute_generator("gemini", prompt)
+            # Obtener el generador del estado o usar gemini por defecto
+            generator = state.get("text_generator_model", "gemini")
+            response = text_generator_manager.execute_generator(generator, prompt)
             state["response"] = response
             self._update_conversation_history(state, "GENERAL_QUERY")
             

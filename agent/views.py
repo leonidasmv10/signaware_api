@@ -52,39 +52,12 @@ class AgentView(APIView):
             return Response({"error": "No se recibió mensaje."}, status=400)
 
         try:
-            if model == "openai":
-                try:
-                    response = text_generator_manager.execute_generator(
-                        generator_name="openai", prompt=user_message
-                    )
-                except Exception as e:
-                    logger.error(f"Error en OpenAI: {e}")
-                    return Response(
-                        {"error": f"Error en el modelo OpenAI: {str(e)}"}, status=500
-                    )
 
-            elif model == "leonidasmv":
-                try:
-                    response = AGENT_MANAGER.execute_agent(
-                        agent_name="chatbot", user_input=user_message
-                    )
-                except Exception as e:
-                    logger.error(f"Error en Leonidasmv: {e}")
-                    return Response(
-                        {"error": f"Error en el modelo Leonidasmv: {str(e)}"},
-                        status=500,
-                    )
-
-            else:
-                try:
-                    response = text_generator_manager.execute_generator(
-                        generator_name="gemini", prompt=user_message
-                    )
-                except Exception as e:
-                    logger.error(f"Error en Gemini: {e}")
-                    return Response(
-                        {"error": f"Error en el modelo Gemini: {str(e)}"}, status=500
-                    )
+            response = AGENT_MANAGER.execute_agent(
+                agent_name="chatbot",
+                user_input=user_message,
+                text_generator_model=model,
+            )
 
             return Response({"response": response})
 

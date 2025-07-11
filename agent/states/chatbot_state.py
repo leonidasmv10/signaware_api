@@ -10,3 +10,4 @@ class ChatbotState(TypedDict):
     detected_intent: str
     response: str
     conversation_history: List[dict]
+    text_generator_model: str  # Generador de texto a usar (gemini, openai, etc.)
