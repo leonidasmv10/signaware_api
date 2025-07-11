@@ -96,7 +96,7 @@ class AgentManager:
             raise RuntimeError(f"Agente '{agent_name}' no está inicializado correctamente")
         
         try:
-            return agent.execute_with_validation(user_input, **kwargs)
+            return agent.execute(user_input, **kwargs)
         except Exception as e:
             self.logger.error(f"Error ejecutando agente '{agent_name}': {e}")
             raise

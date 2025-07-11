@@ -7,7 +7,7 @@ from typing import List, Tuple, Dict
 
 # Importación directa de config
 try:
-    from ...config import RELEVANT_SOUNDS_DICT, SOUND_FILTER_CONFIG
+    from agent.config import RELEVANT_SOUNDS_DICT, SOUND_FILTER_CONFIG
 except ImportError:
     # Fallback para cuando no se puede importar
     RELEVANT_SOUNDS_DICT = {}

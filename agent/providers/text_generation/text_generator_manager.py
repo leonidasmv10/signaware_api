@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 from .text_generation_provider import TextGenerationProvider
 from .gemini_text_generation_provider import GeminiTextGenerationProvider
 from .openai_text_generation_provider import OpenAITextGenerationProvider
-# from .leonidasmv_text_generation_provider import LeonidasmvTextGenerationProvider
+from .leonidasmv_text_generation_provider import LeonidasmvTextGenerationProvider
 
 
 class TextGeneratorManager:
@@ -45,7 +45,7 @@ class TextGeneratorManager:
             
             # Leonidasmv puede requerir más recursos, inicializarlo solo si es necesario
             try:
-                # self._register_generator("leonidasmv", LeonidasmvTextGenerationProvider())
+                self._register_generator("leonidasmv", LeonidasmvTextGenerationProvider())
                 self.logger.info("Generador Leonidasmv inicializado exitosamente")
             except Exception as e:
                 self.logger.warning(f"No se pudo inicializar Leonidasmv generator: {e}")
