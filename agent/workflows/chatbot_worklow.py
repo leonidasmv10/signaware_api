@@ -35,14 +35,11 @@ class ChatbotWorkflow:
         
         # Añadir nodos específicos por categoría de intención
         self.workflow_graph.add_node("hearing_aids_node", self.nodes.hearing_aids_node)
-        self.workflow_graph.add_node("visual_signals_node", self.nodes.visual_signals_node)
-        self.workflow_graph.add_node("audio_translation_node", self.nodes.audio_translation_node)
         self.workflow_graph.add_node("medical_center_node", self.nodes.medical_center_node)
-        self.workflow_graph.add_node("recommend_app_node", self.nodes.recommend_app_node)
-        self.workflow_graph.add_node("know_rights_node", self.nodes.know_rights_node)
-        self.workflow_graph.add_node("certificate_node", self.nodes.certificate_node)
+        self.workflow_graph.add_node("medical_news_node", self.nodes.medical_news_node)
         self.workflow_graph.add_node("sound_report_node", self.nodes.sound_report_node)
         self.workflow_graph.add_node("general_query_node", self.nodes.general_query_node)
+        self.workflow_graph.add_node("generate_image_node", self.nodes.generate_image_node)
         
         # Definir los bordes del chatbot
         # 1. El flujo comienza con clasificación de intención
@@ -54,27 +51,21 @@ class ChatbotWorkflow:
             self._route_to_specific_node,
             {
                 "hearing_aids_node": "hearing_aids_node",
-                "visual_signals_node": "visual_signals_node",
-                "audio_translation_node": "audio_translation_node",
                 "medical_center_node": "medical_center_node",
-                "recommend_app_node": "recommend_app_node",
-                "know_rights_node": "know_rights_node",
-                "certificate_node": "certificate_node",
+                "medical_news_node": "medical_news_node",
                 "sound_report_node": "sound_report_node",
-                "general_query_node": "general_query_node"
+                "general_query_node": "general_query_node",
+                "generate_image_node": "generate_image_node"
             }
         )
         
         # 3. Todos los nodos específicos terminan el flujo
         self.workflow_graph.add_edge("hearing_aids_node", END)
-        self.workflow_graph.add_edge("visual_signals_node", END)
-        self.workflow_graph.add_edge("audio_translation_node", END)
         self.workflow_graph.add_edge("medical_center_node", END)
-        self.workflow_graph.add_edge("recommend_app_node", END)
-        self.workflow_graph.add_edge("know_rights_node", END)
-        self.workflow_graph.add_edge("certificate_node", END)
+        self.workflow_graph.add_edge("medical_news_node", END)
         self.workflow_graph.add_edge("sound_report_node", END)
         self.workflow_graph.add_edge("general_query_node", END)
+        self.workflow_graph.add_edge("generate_image_node", END)
         
         # Compilar el workflow
         try:
@@ -99,14 +90,11 @@ class ChatbotWorkflow:
         # Mapeo de intenciones a nodos
         intent_to_node = {
             "HEARING_AIDS": "hearing_aids_node",
-            "VISUAL_SIGNALS": "visual_signals_node",
-            "AUDIO_TRANSLATION": "audio_translation_node",
             "MEDICAL_CENTER": "medical_center_node",
-            "RECOMMEND_APP": "recommend_app_node",
-            "KNOW_RIGHTS": "know_rights_node",
-            "CERTIFICATE": "certificate_node",
+            "MEDICAL_NEWS": "medical_news_node",
             "SOUND_REPORT": "sound_report_node",
-            "GENERAL_QUERY": "general_query_node"
+            "GENERAL_QUERY": "general_query_node",
+            "GENERATE_IMAGE": "generate_image_node"
         }
         
         # Obtener el nodo correspondiente o usar general_query_node como fallback

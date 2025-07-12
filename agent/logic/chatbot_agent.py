@@ -45,12 +45,12 @@ class ChatbotAgent(BaseAgent):
 
             # Obtener resultado
             response = final_state.get("response", "No se pudo generar una respuesta.")
-            # detected_intent = final_state.get("detected_intent", "GENERAL_QUERY")
+            detected_intent = final_state.get("detected_intent", "GENERAL_QUERY")
 
-            # # Formatear respuesta
-            # result = f"🤖 Chatbot: {response}\n\n📋 Intención detectada: {detected_intent}"
+            # Formatear respuesta
+            result = f"🤖 Chatbot: {response}\n\n📋 Intención detectada: {detected_intent}"
 
-            return response
+            return result
 
         except Exception as e:
             error_msg = f"❌ Error en el chatbot: {e}"

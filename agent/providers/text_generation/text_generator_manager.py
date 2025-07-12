@@ -45,7 +45,7 @@ class TextGeneratorManager:
             
             # Leonidasmv puede requerir más recursos, inicializarlo solo si es necesario
             try:
-                self._register_generator("leonidasmv", LeonidasmvTextGenerationProvider())
+                # self._register_generator("leonidasmv", LeonidasmvTextGenerationProvider())
                 self.logger.info("Generador Leonidasmv inicializado exitosamente")
             except Exception as e:
                 self.logger.warning(f"No se pudo inicializar Leonidasmv generator: {e}")

@@ -29,16 +29,25 @@ class IntentionClassifierService:
     Eres un asistente que clasifica intenciones para ayudar a personas con discapacidad auditiva.
 
     Clasifica la siguiente consulta del usuario en una de estas categorías:
-    - HEARING_AIDS
-    - VISUAL_SIGNALS
-    - AUDIO_TRANSLATION
-    - GENERATE_IMAGE
-    - MEDICAL_CENTER
-    - RECOMMEND_APP
-    - KNOW_RIGHTS
-    - CERTIFICATE
-    - SOUND_REPORT
-    - GENERAL_QUERY
+
+    - HEARING_AIDS: Consultas sobre audífonos, precios, tecnología, mantenimiento, consejos sobre audífonos, información general sobre audífonos
+    - MEDICAL_CENTER: Buscar centros médicos, especialistas, hospitales, clínicas, citas médicas, ubicaciones, dónde encontrar ayuda
+    - MEDICAL_NEWS: Noticias médicas, actualidad, novedades, avances, investigación, tendencias, últimos avances, innovaciones, estudios recientes
+    - GENERATE_IMAGE: Generar imágenes, crear imágenes, dibujos
+    - SOUND_REPORT: Reportes de sonidos, análisis de audio, detección de sonidos
+    - GENERAL_QUERY: Otras consultas generales
+
+    Reglas de prioridad (en orden de importancia):
+    1. Si la consulta menciona "noticias", "actualidad", "novedades", "avances", "últimos avances", "innovaciones", "investigación", "tendencias", "estudios recientes" → MEDICAL_NEWS
+    2. Si la consulta menciona "buscar", "encontrar", "dónde", "centros", "especialistas", "hospitales", "clínicas", "ubicaciones" → MEDICAL_CENTER
+    3. Si la consulta es sobre audífonos pero NO busca centros ni noticias → HEARING_AIDS
+    4. Si la consulta busca ubicaciones o direcciones → MEDICAL_CENTER
+
+    Ejemplos:
+    - "¿Cuáles son los últimos avances en audífonos?" → MEDICAL_NEWS
+    - "Quiero noticias sobre audífonos" → MEDICAL_NEWS
+    - "Buscar centros médicos en Barcelona" → MEDICAL_CENTER
+    - "¿Cómo funcionan los audífonos?" → HEARING_AIDS
 
     Consulta del usuario: "{user_input}"
 

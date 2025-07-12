@@ -1,8 +1,13 @@
 from pathlib import Path
 from datetime import timedelta
+import os
 from corsheaders.defaults import (
     default_headers,
 )
+
+# Cargar variables de entorno desde .env
+from dotenv import load_dotenv
+load_dotenv()
 
 # =============================================================================
 # Project Paths
