@@ -53,13 +53,18 @@ class AgentView(APIView):
 
         try:
 
-            response = AGENT_MANAGER.execute_agent(
+            result = AGENT_MANAGER.execute_agent(
                 agent_name="chatbot",
                 user_input=user_message,
                 text_generator_model=model,
             )
 
-            return Response({"response": response})
+            # Si el resultado es un objeto con response y detected_intent
+            if isinstance(result, dict):
+                return Response(result)
+            else:
+                # Fallback para respuestas de texto simple
+                return Response({"response": result, "detected_intent": "GENERAL_QUERY"})
 
         except Exception as e:
             logger.error(f"Error general en AgentView: {e}")
@@ -504,3 +509,6 @@ class DetectedSoundViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+

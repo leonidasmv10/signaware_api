@@ -20,7 +20,7 @@ class ChatbotAgent(BaseAgent):
         # Pasar la instancia del clasificador a los nodos
         self.workflow.nodes.intention_classifier = self.intention_classifier_service
 
-    def execute(self, user_input: str, **kwargs) -> str:
+    def execute(self, user_input: str, **kwargs) -> dict:
         """
         Ejecuta el workflow del chatbot con detector de intenciones.
 
@@ -28,7 +28,7 @@ class ChatbotAgent(BaseAgent):
             user_input: Entrada del usuario
 
         Returns:
-            str: Respuesta del chatbot
+            dict: Respuesta del chatbot con response y detected_intent
         """
         try:
             # Obtener estado inicial
@@ -47,17 +47,19 @@ class ChatbotAgent(BaseAgent):
             response = final_state.get("response", "No se pudo generar una respuesta.")
             detected_intent = final_state.get("detected_intent", "GENERAL_QUERY")
 
-            # Formatear respuesta
-            result = f"🤖 Chatbot: {response}\n\n📋 Intención detectada: {detected_intent}"
-
-            return result
+            # Devolver objeto con response y detected_intent
+            return {
+                "response": response,
+                "detected_intent": detected_intent
+            }
 
         except Exception as e:
             error_msg = f"❌ Error en el chatbot: {e}"
             print(error_msg)
-            return (
-                "Lo siento, no pude procesar tu consulta. ¿Podrías intentar de nuevo?"
-            )
+            return {
+                "response": "Lo siento, no pude procesar tu consulta. ¿Podrías intentar de nuevo?",
+                "detected_intent": "GENERAL_QUERY"
+            }
 
     def chat(self, user_input: str) -> dict:
         """

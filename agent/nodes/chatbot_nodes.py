@@ -661,45 +661,107 @@ class ChatbotNodes:
         return prompt
 
     def generate_image_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Nodo especializado para generación de imágenes usando Stable Diffusion"""
         try:
-            from ..providers.text_generation.text_generator_manager import (
-                text_generator_manager,
+            from ..providers.image_generation.image_generator_manager import (
+                image_generator_manager,
             )
 
             user_input = state.get("user_input", "")
 
-            prompt = f"""
-            Eres un amigable especialista en salud auditiva que ayuda a personas con discapacidad auditiva.
-            
-            El usuario pregunta: "{user_input}"
-            
-            Responde de manera:
-            - 🎉 Alegre y motivadora
-            - 📝 Breve y fácil de entender
-            - 💝 Amigable y empática
-            - ✨ Con emojis para hacerlo más ameno
-            
-            Da información práctica sobre:
-            - Dónde encontrar ayuda médica
-            - Qué tipo de especialista buscar
-            - Un consejo para la consulta
-            
-            Máximo 3-4 líneas. ¡Sé positivo y alentador!
-            """
+            # Extraer parámetros de generación de imagen del input del usuario
+            self.logger.info(f"🎨 Procesando solicitud de imagen: '{user_input}'")
+            image_type, description = self._extract_image_parameters(user_input)
+            self.logger.info(f"🎨 Tipo de imagen: '{image_type}', Descripción: '{description}'")
 
-            # Obtener el generador del estado o usar gemini por defecto
-            generator = state.get("text_generator_model", "gemini")
-            response = text_generator_manager.execute_generator(generator, prompt)
-            state["response"] = response
-            self._update_conversation_history(state, "MEDICAL_CENTER")
+            # Generar prompt para la imagen
+            prompt = self._generate_image_prompt(image_type, description, user_input)
+
+            # Generar la imagen usando Stable Diffusion
+            self.logger.info("🎨 Iniciando generación de imagen...")
+            result = image_generator_manager.execute_generator("stable_diffusion", prompt)
+
+            # Verificar si la generación fue exitosa
+            if not result.get("success", False):
+                self.logger.error(f"❌ Error en generación: {result.get('error', 'Error desconocido')}")
+                state["response"] = f"¡Ups! 😅 {result.get('message', 'No se pudo generar la imagen.')} 💪"
+                self._update_conversation_history(state, "GENERATE_IMAGE")
+                return state
+
+            # Obtener la imagen en base64
+            image_base64 = result.get("image_base64")
+            if not image_base64:
+                state["response"] = "¡Ups! 😅 No se pudo generar la imagen. Intenta con otra descripción. 💪"
+                self._update_conversation_history(state, "GENERATE_IMAGE")
+                return state
+
+            # Devolver objeto JSON con la estructura que espera el frontend
+            response_obj = {
+                "success": True,
+                "image_base64": image_base64,
+                "prompt": prompt,
+                "parameters": result.get("parameters", {}),
+                "format": "base64"
+            }
+            # Convertir el objeto a string JSON para que sea compatible con AIMessage
+            import json
+            state["response"] = json.dumps(response_obj)
+            
+            self.logger.info("✅ Imagen generada exitosamente")
+            self._update_conversation_history(state, "GENERATE_IMAGE")
 
             return state
+
         except Exception as e:
-            self.logger.error(f"Error en medical_center_node: {e}")
+            self.logger.error(f"Error en generate_image_node: {e}")
             state["response"] = (
-                "¡Ups! 😅 No pude procesar tu consulta. ¿Me lo preguntas de otra forma? 💪"
+                "¡Ups! 😅 No pude generar la imagen. ¿Me lo pides de otra forma? 💪"
             )
             return state
+
+    def _extract_image_parameters(self, user_input: str) -> tuple:
+        """Extrae parámetros de generación de imagen del input del usuario"""
+        import re
+        
+        image_type = "general"  # general, medical, hearing_aid, illustration
+        description = user_input
+        
+        # Detectar tipo de imagen
+        if any(word in user_input.lower() for word in ["audífono", "audifono", "audífonos", "audifonos", "dispositivo auditivo"]):
+            image_type = "hearing_aid"
+            # Extraer descripción específica del audífono
+            hearing_patterns = [
+                r"(?:audífono|audifono|dispositivo)\s+(.+?)(?:\s+por favor|\s+gracias|$)",
+                r"genera\s+(?:un\s+)?(?:audífono|audifono|dispositivo)\s+(.+?)(?:\s+por favor|\s+gracias|$)",
+                r"crea\s+(?:un\s+)?(?:audífono|audifono|dispositivo)\s+(.+?)(?:\s+por favor|\s+gracias|$)"
+            ]
+            for pattern in hearing_patterns:
+                match = re.search(pattern, user_input, re.IGNORECASE)
+                if match:
+                    description = match.group(1).strip()
+                    break
+        elif any(word in user_input.lower() for word in ["médico", "medico", "médica", "medica", "anatomía", "anatomia", "oído", "oido", "oreja"]):
+            image_type = "medical"
+        elif any(word in user_input.lower() for word in ["ilustración", "ilustracion", "diagrama", "esquema", "dibujo"]):
+            image_type = "illustration"
+        
+        # Limpiar descripción
+        description = re.sub(r'(?:genera|crea|dibuja|muestra)\s+', '', description, flags=re.IGNORECASE)
+        description = re.sub(r'\s+(?:por favor|gracias|\.)$', '', description, flags=re.IGNORECASE)
+        
+        return image_type, description
+
+    def _generate_image_prompt(self, image_type: str, description: str, user_input: str) -> str:
+        """Genera un prompt optimizado para la generación de imágenes"""
+        
+        if image_type == "hearing_aid":
+            return f"modern hearing aid device, {description}, professional product photography, clean background, high quality, detailed, realistic"
+        elif image_type == "medical":
+            return f"professional medical illustration, {description}, clean, detailed, educational, high quality, anatomical accuracy"
+        elif image_type == "illustration":
+            return f"professional illustration, {description}, clean, detailed, educational, high quality, artistic"
+        else:
+            return f"high quality image, {description}, clean, detailed, professional, realistic"
 
     def sound_report_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Nodo especializado para reportes y análisis de sonidos"""

@@ -20,3 +20,6 @@ sentencepiece
 seaborn
 sounddevice
 requests
+diffusers
+torch
+torchvision
