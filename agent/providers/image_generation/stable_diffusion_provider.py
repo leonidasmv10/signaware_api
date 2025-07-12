@@ -181,18 +181,19 @@ class StableDiffusionProvider(ImageGenerationProvider):
             guidance_scale=7.5
         )
     
-    def generate_hearing_aid_image(self, description: str = "modern hearing aid") -> Dict[str, Any]:
+    def generate_hearing_aid_image(self, description: str = "medical hearing aid device for hearing loss") -> Dict[str, Any]:
         """
-        Genera una imagen de audífonos.
+        Genera una imagen de audífonos médicos para sordera.
         
         Args:
-            description: Descripción específica del audífono
+            description: Descripción específica del audífono médico
             
         Returns:
             Dict con la imagen generada
         """
-        hearing_prompt = f"modern hearing aid device, {description}, professional product photography, clean background, high quality, detailed"
-        hearing_negative = "cartoon, anime, blurry, low quality, distorted, deformed, ugly, bad anatomy, multiple devices"
+        # Prompt específico para audífonos médicos (no auriculares de música)
+        hearing_prompt = f"medical hearing aid device for hearing loss and deafness, {description}, professional medical device photography, clean background, high quality, detailed, realistic, medical equipment"
+        hearing_negative = "cartoon, anime, blurry, low quality, distorted, deformed, ugly, bad anatomy, multiple devices, headphones, earbuds, music headphones, gaming headset, wireless earbuds, airpods, earphones, music device, entertainment device"
         
         return self.execute(
             prompt=hearing_prompt,
