@@ -62,7 +62,7 @@ class IntentionClassifierService:
             prompt = self.get_intent_prompt(user_input)
 
             # Generar respuesta
-            response = self.text_generator_manager.execute_generator("openai", prompt)
+            response = self.text_generator_manager.execute_generator("gemini", prompt)
 
             # Extraer y limpiar la respuesta
             intent = response.strip().upper()

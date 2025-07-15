@@ -12,6 +12,17 @@ class TestView(APIView):
     def get(self, request):
         return Response({"message": "¡Bienvenido de nuevo!"}, status=status.HTTP_200_OK)
 
+class ValidateTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        # Si llegamos aquí, el token es válido porque el decorator IsAuthenticated lo validó
+        return Response({
+            "valid": True,
+            "user_id": request.user.id,
+            "username": request.user.username
+        }, status=status.HTTP_200_OK)
+
 class RegisterAPIView(APIView):
     def post(self, request):
         print("Datos recibidos:", request.data)
